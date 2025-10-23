@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TokInvest</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{
+  --bg-dark:#1e1e1e;
+  --card-dark:#2a2a2a;
+  --text-light:#ffffff;
+  --muted:#aaaaaa;
+  --accent:#0f6ef6;
+  --shadow:0 6px 18px rgba(0,0,0,0.4);
+  --radius:12px;
+  font-family:Inter, system-ui, sans-serif;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:linear-gradient(180deg,#000000 0%, var(--bg-dark) 100%);color:var(--text-light);}
+.container{max-width:1100px;margin:0 auto;padding:32px;}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--text-light);}
+.logo{font-weight:800;font-size:22px;color:var(--accent);}
+.cta{background:var(--accent);color:white;border:none;padding:10px 16px;border-radius:10px;font-weight:700;cursor:pointer;box-shadow:var(--shadow);}
+.hero{display:grid;grid-template-columns:1fr 420px;gap:28px;align-items:center;margin-bottom:36px;}
+.hero-card{background:var(--card-dark);padding:28px;border-radius:var(--radius);box-shadow:var(--shadow);}
+.features{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:26px 0 40px;}
+.feature{background:var(--card-dark);padding:18px;border-radius:12px;box-shadow:var(--shadow);}
+.ribbon{display:inline-block;background:#0f6ef640;color:var(--accent);padding:8px 12px;border-radius:12px;font-weight:700;margin-bottom:16px;}
+.disclaimer{background:#2a2a2a;border-radius:10px;padding:12px;border:1px dashed #444;color:var(--muted);font-size:13px;margin-bottom:18px;}
+footer{border-top:1px solid #444;padding:18px 0;display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:14px;}
+#investSection{display:none;margin-top:40px;}
+table{width:100%;border-collapse:collapse;margin-top:12px;color:var(--text-light);}
+th,td{text-align:left;padding:8px;border-bottom:1px solid #444;}
+input.qty{width:80px;padding:4px;border-radius:6px;border:1px solid #555;margin-right:4px;background:#2a2a2a;color:white;}
+button.buy,.sell,.sellAll{padding:6px 10px;border:none;border-radius:6px;cursor:pointer;font-weight:600;}
+.buy{background:#0f6ef6;color:white;}
+.sell{background:#ef4444;color:white;}
+.sellAll{background:#f59e0b;color:white;}
+.reset, .backHome{margin-top:16px;background:#444;color:white;border:none;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;}
+.sparkline{width:120px;height:30px;background:#1e1e1e;}
+.loading{font-size:16px;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- Home Screen -->
+  <div id="homeScreen">
+    <div class="topbar">
+      <a class="brand" href="#"><div class="logo">TokInvest</div></a>
+      <button class="cta" onclick="showInvest()">Get Started</button>
+    </div>
+
+    <div class="ribbon">DEMO — Educational Only</div>
+    <div class="disclaimer"><strong>Important:</strong> This site is a demo for educational use only. It does not accept real funds or provide financial advice.</div>
+
+    <section class="hero">
+      <div class="hero-card">
+        <h1>TokInvest — Learn crypto investing safely.</h1>
+        <p style="color:var(--muted)">A demo platform to show crypto investing concepts with live prices. Built purely for education.</p>
+      </div>
+      <aside class="hero-card">
+        <h3>Live Prices</h3>
+        <div id="priceList" style="margin-top:10px; font-size:14px; color:var(--muted)">Loading prices...</div>
+      </aside>
+    </section>
+
+    <section class="features">
+      <div class="feature"><h3>Buy / Sell in INR</h3><p>Trade using rupees to understand market behavior.</p></div>
+      <div class="feature"><h3>Portfolio Dashboard</h3><p>View your simulated holdings and profits.</p></div>
+      <div class="feature"><h3>Data Auto Refresh</h3><p>Prices update every 30 seconds automatically.</p></div>
+    </section>
+
+    <footer>
+      <div>TokInvest — Demo only</div>
+      <div>&copy; <span id="year"></span> TokInvest</div>
+    </footer>
+  </div>
+
+  <!-- Investing Dashboard -->
+  <div id="investSection">
+    <div class="topbar">
+      <a class="brand" href="#"><div class="logo">TokInvest</div></a>
+    </div>
+    <div id="loading" class="loading">Fetching market data<span id="dots">...</span></div>
+    <div id="dashboard" style="display:none">
+      <h2>Demo Investing Dashboard</h2>
+      <p>Your balance: ₹<span id="balance">10000</span></p>
+      <table>
+        <thead><tr><th>Crypto</th><th>Price (INR)</th><th>Chart</th><th>Holdings</th><th>Actions</th></tr></thead>
+        <tbody id="investList"></tbody>
+      </table>
+      <button class="reset" onclick="resetPortfolio()">Reset Portfolio</button>
+      <button class="backHome" onclick="backHome()">Back to Home</button>
+      <div class="disclaimer"><strong>Disclaimer:</strong> Demo only. No real investments.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let coins=[
+{id:'bitcoin',symbol:'BTC',name:'Bitcoin',prices:[]},
+{id:'ethereum',symbol:'ETH',name:'Ethereum',prices:[]},
+{id:'binancecoin',symbol:'BNB',name:'BNB',prices:[]},
+{id:'cardano',symbol:'ADA',name:'Cardano',prices:[]},
+{id:'solana',symbol:'SOL',name:'Solana',prices:[]},
+{id:'ripple',symbol:'XRP',name:'XRP',prices:[]},
+{id:'dogecoin',symbol:'DOGE',name:'Dogecoin',prices:[]},
+{id:'tron',symbol:'TRX',name:'TRON',prices:[]},
+{id:'polygon',symbol:'MATIC',name:'Polygon',prices:[]},
+{id:'avalanche-2',symbol:'AVAX',name:'Avalanche',prices:[]}
+];
+
+let state={balance:10000,holdings:{}};
+coins.forEach(c=>state.holdings[c.symbol]=0);
+if(localStorage.getItem('tokinvest_demo')) state=JSON.parse(localStorage.getItem('tokinvest_demo'));
+
+function saveState(){localStorage.setItem('tokinvest_demo',JSON.stringify(state));}
+function showInvest(){document.getElementById('homeScreen').style.display='none'; document.getElementById('investSection').style.display='block'; animateDots(); fetchData();}
+function backHome(){document.getElementById('homeScreen').style.display='block'; document.getElementById('investSection').style.display='none';}
+function formatINR(num){return num.toLocaleString('en-IN',{maximumFractionDigits:2});}
+
+// Loading dots animation
+let dotCount=0;
+function animateDots(){
+  setInterval(()=>{dotCount=(dotCount+1)%4; document.getElementById('dots').textContent='.'.repeat(dotCount);},500);
+}
+
+// Fetch live prices without interrupting inputs
+async function fetchData(){
+  try{
+    document.getElementById('dashboard').style.display='none';
+    document.getElementById('loading').style.display='block';
+    const ids=coins.map(c=>c.id).join(',');
+    const res=await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=inr`);
+    const data=await res.json();
+    coins.forEach(c=>{
+      const price=data[c.id]?.inr||0;
+      if(c.prices.length>=30) c.prices.shift();
+      c.prices.push(price);
+      c.current=price;
+    });
+    document.getElementById('loading').style.display='none';
+    document.getElementById('dashboard').style.display='block';
+    renderPrices(); renderInvest();
+  }catch(err){console.error(err);}
+}
+
+function renderPrices(){
+  const priceDiv=document.getElementById('priceList');
+  priceDiv.innerHTML='';
+  coins.forEach(c=>{
+    const d=document.createElement('div');
+    d.textContent=`${c.symbol}: ₹${formatINR(c.current)}`;
+    priceDiv.appendChild(d);
+  });
+}
+
+function renderInvest(){
+  document.getElementById('balance').textContent=formatINR(state.balance);
+  const tbody=document.getElementById('investList');
+  tbody.innerHTML='';
+  coins.forEach((c,i)=>{
+    const tr=document.createElement('tr');
+    const chartId='chart'+i;
+    tr.innerHTML=`
+      <td>${c.symbol}</td>
+      <td>₹${formatINR(c.current)}</td>
+      <td><canvas id="${chartId}" class="sparkline"></canvas></td>
+      <td>${state.holdings[c.symbol].toFixed(6)}</td>
+      <td>
+        <input type="number" min="0" class="qty" placeholder="₹">
+        <button class="buy" onclick="buyCoin('${c.symbol}', this)">Buy</button>
+        <button class="sell" onclick="sellCoin('${c.symbol}', this)">Sell</button>
+        <button class="sellAll" onclick="sellAll('${c.symbol}')">Sell All</button>
+      </td>`;
+    tbody.appendChild(tr);
+    // Chart
+    const ctx=document.getElementById(chartId).getContext('2d');
+    new Chart(ctx,{type:'line',data:{labels:c.prices.map((_,idx)=>idx),datasets:[{data:c.prices,borderColor:'#0f6ef6',borderWidth:2,pointRadius:0,fill:false}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false}}}});
+  });
+}
+
+function buyCoin(symbol,btn){
+  const input=btn.parentElement.querySelector('.qty');
+  const amt=parseFloat(input.value);
+  if(isNaN(amt)||amt<=0)return alert('Enter valid amount');
+  if(amt>state.balance)return alert('Not enough balance');
+  const coin=coins.find(c=>c.symbol===symbol);
+  const units=amt/coin.current;
+  state.balance-=amt; state.holdings[symbol]+=units;
+  saveState(); renderInvest(); input.value='';
+}
+
+function sellCoin(symbol,btn){
+  const input=btn.parentElement.querySelector('.qty');
+  const amt=parseFloat(input.value);
+  if(isNaN(amt)||amt<=0)return alert('Enter valid amount');
+  const coin=coins.find(c=>c.symbol===symbol);
+  const units=amt/coin.current;
+  if(units>state.holdings[symbol])return alert('Not enough units');
+  state.balance+=amt; state.holdings[symbol]-=units;
+  saveState(); renderInvest(); input.value='';
+}
+
+function sellAll(symbol){
+  const coin=coins.find(c=>c.symbol===symbol);
+  const amt=coin.current*state.holdings[symbol];
+  state.balance+=amt; state.holdings[symbol]=0;
+  saveState(); renderInvest();
+}
+
+function resetPortfolio(){if(confirm('Reset your portfolio?')){state.balance=10000;coins.forEach(c=>state.holdings[c.symbol]=0);saveState();renderInvest();}}
+
+setInterval(fetchData,30000);
+document.getElementById('year').textContent=new Date().getFullYear();
+</script>
+</body>
+</html>
